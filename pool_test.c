@@ -1,6 +1,5 @@
 #include "atomic.h"
 #include "timer.h"
-#include <threads.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -8,21 +7,36 @@
 
 static atomic(int) wait;
 static thrd_t threads[8192];
-static spinlock lock1;
-static uint64_t count;
+static atomic(uint64_t) count;
 static int cpus;
 static int run(void *ctx)
 {
 	while(!wait) ;	
 
+	int c = 0;
+	PoolElement *array[65536];
+	int a = 0;	
 	while(wait)
 	{
-		lock(&lock1);
+//		PoolElement *e = pool_alloc();
+		PoolElement *e = malloc(sizeof(PoolElement));
+		array[a++] = e;
 		++count;
-		unlock(&lock1);
+//		atomic_fetch_add(count, 1);	
+		e->size = 10;
+		c += e->size;
+		if(a == 65536)
+		{
+			for(int i=0;i<65536;i++) 
+				free(array[i]);
+//				pool_free(array[i]);
+			a = 0;
+		}
+//		pool_free(e);		
+//		free(e);
 		//if(cpus >= 2048) printf("count=%lu\n", count);
 	}
-	return 0;
+	return (int)c;
 }
 
 
@@ -35,9 +49,6 @@ int main(int argc, char** argv)
 		cpus = i;
 		wait = 0;
 		count = 0;
-		lock_init(&lock1);
-//		mtx_init(&lock1, mtx_plain);
-//		memset(&lock1, 0, sizeof(lock1));
 		for(int j=0;j<i;j++)		
 			thrd_create(&threads[j], run, 0);	
 //		sleep(1);	
