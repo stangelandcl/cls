@@ -12,7 +12,7 @@
 typedef struct spinlock
 {
 //	atomic_flag flag;
-	atomic(int) flag;
+	atomic(char) flag;
 } spinlock;
 static int spinlock_trylock(spinlock *s)
 {
@@ -25,7 +25,7 @@ static int spinlock_trylock(spinlock *s)
 }
 static void spinlock_lock(spinlock* s)
 {	
-	int actual;
+	char actual;
 //	int count = 10;
 //	do {
 //		if(mtx_trylock(&s->mutex)) return;
@@ -41,8 +41,8 @@ static void spinlock_lock(spinlock* s)
 	for(;;)
 	{
 		actual = 0;
-		if(atomic_compare_exchange_strong_explicit(&s->flag, 
-	    &actual, 1, memory_order_acquire, memory_order_acquire)) return;
+		if(atomic_compare_exchange_weak_explicit(&s->flag, 
+	    &actual, (char)1, memory_order_acquire, memory_order_relaxed)) return;
 //	    if(spinlock_trylock(s)) return;
 //	while(!atomic_compare_exchange_strong(&s->flag, &actual, 1))	   
 		thrd_yield();
@@ -51,8 +51,8 @@ static void spinlock_lock(spinlock* s)
 static void spinlock_unlock(spinlock* s) 
 { 
 //	atomic_fetch_add(&s->flag, -1);
-	s->flag = 0;
-//	atomic_store_explicit(&s->flag, 0, memory_order_release);
+//	s->flag = 0;
+	atomic_store_explicit(&s->flag, (char)0, memory_order_release);
 //	atomic_flag_clear_explicit(&s->flag, memory_order_release);	
 }
 
